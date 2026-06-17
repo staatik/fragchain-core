@@ -1,0 +1,37 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        libpq-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml ./
+RUN pip install --upgrade pip \
+ && pip install . \
+ && pip install flower>=2.0
+
+COPY fragchain ./fragchain
+COPY alembic.ini ./
+COPY scripts ./scripts
+COPY prompts ./prompts
+COPY chains ./chains
+
+# Drop privileges (SAST S-013): run the worker/beat/flower as a non-root
+# user. The worker shells out to `git` and writes Sigma clones under
+# SIGMA_REPOS_DIR (default /app/data/sigma-repos) — pre-create + own that
+# path so a non-root user can clone into it. No capabilities required.
+RUN groupadd -r app && useradd -r -g app -u 10001 app \
+ && mkdir -p /app/data \
+ && chown -R app:app /app
+USER app
+
+CMD ["celery", "-A", "fragchain.worker.celery_app", "worker", "--loglevel=INFO"]

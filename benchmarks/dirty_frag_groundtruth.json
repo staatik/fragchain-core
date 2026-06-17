@@ -1,0 +1,22 @@
+{
+  "name": "dirty_frag_groundtruth",
+  "description": "Single-case regression benchmark: synthesize the attack chain for CVE-2026-43284 (Dirty Frag) and compare to the hand-validated ground truth in chains/CVE-2026-43284.json. The expected technique sequence is T1078 -> T1068 -> T1548.003 -> T1014.",
+  "iterations_per_case": 1,
+  "cases": [
+    {
+      "id": "CVE-2026-43284",
+      "ground_truth_path": "chains/CVE-2026-43284.json",
+      "variables": {
+        "cve_id": "CVE-2026-43284",
+        "cve_description": "Memory-fragmentation race in the Linux kernel that allows an unprivileged local user to escalate to root by colliding two adjacent page allocations during a partial write. Affects kernels 6.6.x, 6.7.x, 6.8.x. CISA KEV listed.",
+        "cvss_score": "8.4",
+        "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+        "affected_products": "linux:kernel:6.6.0; linux:kernel:6.7.0; linux:kernel:6.8.0",
+        "references": "https://www.cve.org/CVERecord?id=CVE-2026-43284 ; https://github.com/fragchain/dirty-frag-poc ; https://lwn.net/Articles/dirty-frag/",
+        "epss_score": "0.74",
+        "kev": "true",
+        "attackerkb_score": "4.1"
+      }
+    }
+  ]
+}

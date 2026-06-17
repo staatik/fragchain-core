@@ -1,0 +1,45 @@
+.tlp-badge {
+  letter-spacing: 0.08em;
+}
+
+.embargo-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  white-space: nowrap;
+}
+
+.embargo-indicator .lock {
+  font-size: var(--text-sm);
+  line-height: 1;
+  animation: embargo-pulse 2s ease-in-out infinite;
+}
+
+.embargo-indicator .countdown {
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.embargo-indicator.released {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.embargo-indicator.released .lock {
+  animation: none;
+}
+
+@keyframes embargo-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}

@@ -1,0 +1,10 @@
+Target ATT&CK technique:
+- technique_id: {technique_id}
+- technique_name: {technique_name}
+- tactic: {tactic} ({tactic_id})
+- description: {technique_description}
+
+Candidate Sigma rule (YAML):
+{rule_yaml}
+
+Decide whether this rule covers the target technique and emit the JSON verdict described in the system prompt.

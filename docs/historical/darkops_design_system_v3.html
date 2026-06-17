@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DarkOps v3 — FragChain UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DARKOPS v3 — SIDEBAR NAVIGATION PATTERN
+   Changes from v2:
+   - Left sidebar nav (collapsible) replaces top-bar nav
+   - Slim topbar for global utilities only
+   - Section grouping in sidebar
+   - Count badges on nav items
+   - Service status indicators in topbar
+   ============================================================ */
+
+:root {
+  /* Colors */
+  --bg:           #0a0e17;
+  --surface:      #111827;
+  --surface2:    #1a2235;
+  --surface3:    #222d42;
+  --surface-hi:  #2a3654;
+  --border:      #1e2d45;
+  --border-hi:   #2d4a6f;
+  --border-focus:#38bdf8;
+  --text:        #c9d1d9;
+  --text-dim:    #6b7b90;
+  --text-bright: #e6edf3;
+  --text-muted:  #4a5870;
+
+  --accent:      #38bdf8;
+  --accent-hi:   #7dd4fc;
+  --accent-bg:   rgba(56, 189, 248, 0.10);
+  --accent2:     #818cf8;
+  --accent2-bg:  rgba(129, 140, 248, 0.10);
+  --accent3:     #34d399;
+  --accent3-bg:  rgba(52, 211, 153, 0.10);
+  --danger:      #f87171;
+  --danger-bg:   rgba(248, 113, 113, 0.10);
+  --warning:     #fbbf24;
+  --warning-bg:  rgba(251, 191, 36, 0.10);
+  --success:     #34d399;
+  --success-bg:  rgba(52, 211, 153, 0.10);
+
+  /* Typography */
+  --text-micro: 10px;
+  --text-xs:    11px;
+  --text-sm:    12px;
+  --text-base:  13px;
+  --text-md:    14px;
+  --text-lg:    16px;
+  --text-xl:    18px;
+  --text-2xl:   20px;
+  --text-3xl:   28px;
+  --leading-tight: 1.25;
+  --leading-base:  1.5;
+
+  /* Spacing (4px base) */
+  --space-1:  4px;   --space-2:  8px;   --space-3:  12px;
+  --space-4:  16px;  --space-5:  20px;  --space-6:  24px;
+  --space-8:  32px;  --space-10: 40px;  --space-12: 48px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
+  --shadow-focus: 0 0 0 2px var(--accent);
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+  --transition-slow: 280ms ease;
+
+  /* Fonts */
+  --font-display: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-body:    'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Layout — v3 */
+  --topbar-height:      48px;
+  --sidebar-width:      220px;
+  --sidebar-collapsed:  56px;
+  --context-bar-height: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent); color: var(--bg); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface-hi); border-radius: var(--radius-sm); }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+/* Typography utilities */
+.mono { font-family: var(--font-display); }
+.sans { font-family: var(--font-body); }
+.text-micro { font-size: var(--text-micro); }
+.text-xs    { font-size: var(--text-xs); }
+.text-sm    { font-size: var(--text-sm); }
+.text-base  { font-size: var(--text-base); }
+.text-md    { font-size: var(--text-md); }
+.text-lg    { font-size: var(--text-lg); }
+.text-xl    { font-size: var(--text-xl); }
+.text-2xl   { font-size: var(--text-2xl); }
+.text-3xl   { font-size: var(--text-3xl); }
+.text-dim    { color: var(--text-dim); }
+.text-bright { color: var(--text-bright); }
+.text-muted  { color: var(--text-muted); }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.uppercase    { text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ============================================================
+   APP LAYOUT — v3 (TOPBAR + SIDEBAR + MAIN)
+   ============================================================ */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar main";
+  height: 100vh;
+  transition: grid-template-columns var(--transition-base);
+}
+
+.app.sidebar-collapsed {
+  grid-template-columns: var(--sidebar-collapsed) 1fr;
+}
+
+/* ============================================================
+   TOPBAR (slim, global utilities only)
+   ============================================================ */
+
+.topbar {
+  grid-area: topbar;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  gap: var(--space-4);
+  z-index: 100;
+}
+
+.topbar-brand {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: 0.05em;
+  width: calc(var(--sidebar-width) - var(--space-8));
+  transition: width var(--transition-base);
+}
+.app.sidebar-collapsed .topbar-brand {
+  width: calc(var(--sidebar-collapsed) - var(--space-8));
+  font-size: var(--text-sm);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.topbar-brand .accent { color: var(--accent); }
+
+.topbar-search {
+  position: relative;
+  flex: 1;
+  max-width: 420px;
+}
+.topbar-search input {
+  width: 100%;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px var(--space-3) 6px 32px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  transition: var(--transition-base);
+}
+.topbar-search input:hover { border-color: var(--border-hi); }
+.topbar-search input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+.topbar-search::before {
+  content: '⌕';
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: var(--text-md);
+  pointer-events: none;
+}
+.topbar-search-kbd {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface3);
+  color: var(--text-dim);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.topbar-spacer { flex: 1; }
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  height: 28px;
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--text-micro);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: default;
+}
+.status-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-muted);
+}
+.status-indicator.ok::before    { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.status-indicator.warn::before  { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+.status-indicator.error::before { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.status-indicator.off::before   { background: var(--text-muted); }
+
+.topbar-icon-btn {
+  position: relative;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-base);
+  font-size: var(--text-md);
+  line-height: 1;
+}
+.topbar-icon-btn:hover {
+  background: var(--surface2);
+  color: var(--text-bright);
+}
+
+.topbar-icon-btn .badge-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2) 4px 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+.topbar-user:hover {
+  border-color: var(--border-hi);
+  background: var(--surface3);
+}
+.topbar-user-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.topbar-user-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--text);
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
+.sidebar {
+  grid-area: sidebar;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width var(--transition-base);
+}
+
+.sidebar-content {
+  flex: 1;
+  padding: var(--space-3) 0;
+}
+
+.sidebar-section {
+  margin-bottom: var(--space-3);
+}
+
+.sidebar-section-label {
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transition: opacity var(--transition-fast);
+}
+.app.sidebar-collapsed .sidebar-section-label {
+  opacity: 0;
+  height: var(--space-3);
+  padding: var(--space-2) 0;
+  font-size: 1px;
+}
+.app.sidebar-collapsed .sidebar-section + .sidebar-section .sidebar-section-label::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-2) var(--space-3);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+  white-space: nowrap;
+}
+
+.sidebar-item:hover {
+  background: var(--surface2);
+  color: var(--text-bright);
+}
+
+.sidebar-item.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+}
+
+.sidebar-item-icon {
+  font-family: var(--font-display);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-md);
+  flex-shrink: 0;
+}
+
+.sidebar-item-label {
+  flex: 1;
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}
+.app.sidebar-collapsed .sidebar-item-label { display: none; }
+
+.sidebar-item-badge {
+  min-width: 18px;
+  padding: 1px 5px;
+  background: var(--accent2-bg);
+  color: var(--accent2);
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+}
+.sidebar-item-badge.warning { background: var(--warning-bg); color: var(--warning); }
+.sidebar-item-badge.danger  { background: var(--danger-bg);  color: var(--danger); }
+.sidebar-item-badge.success { background: var(--success-bg); color: var(--success); }
+
+.app.sidebar-collapsed .sidebar-item-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 6px;
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  font-size: 0;
+  background: var(--accent2);
+}
+.app.sidebar-collapsed .sidebar-item-badge.warning { background: var(--warning); }
+.app.sidebar-collapsed .sidebar-item-badge.danger  { background: var(--danger); }
+
+/* Tooltip when collapsed */
+.app.sidebar-collapsed .sidebar-item {
+  position: relative;
+}
+.app.sidebar-collapsed .sidebar-item:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface-hi);
+  color: var(--text-bright);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-family: var(--font-body);
+  white-space: nowrap;
+  z-index: 200;
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding: var(--space-2);
+}
+
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-base);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+}
+.sidebar-collapse-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.sidebar-collapse-btn-icon {
+  transition: transform var(--transition-base);
+}
+.app.sidebar-collapsed .sidebar-collapse-btn-icon {
+  transform: rotate(180deg);
+}
+.app.sidebar-collapsed .sidebar-collapse-btn-label { display: none; }
+
+/* ============================================================
+   MAIN CONTENT AREA
+   ============================================================ */
+
+.main {
+  grid-area: main;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.context-bar {
+  height: var(--context-bar-height);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-5);
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.context-bar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--text-bright);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.context-bar-spacer { flex: 1; }
+
+.main-content {
+  flex: 1;
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+.main-content.no-padding { padding: 0; }
+
+/* For very wide views (Matrix), allow full-bleed */
+.main-content.full-bleed {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   BUTTONS (from v2)
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-base);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface3); border-color: var(--border-hi); color: var(--text-bright); }
+.btn:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.active:hover { background: var(--accent-hi); }
+.btn.danger { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: var(--danger); color: var(--bg); }
+.btn.success { background: var(--success-bg); border-color: var(--success); color: var(--success); }
+.btn.success:hover { background: var(--success); color: var(--bg); }
+.btn.warning { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface2); border-color: var(--border); }
+.btn.sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
+.btn.lg { padding: var(--space-3) var(--space-5); font-size: var(--text-md); }
+
+/* ============================================================
+   FORM CONTROLS, DROPDOWNS, ETC. (from v2 — abbreviated)
+   ============================================================ */
+
+.form-group { margin-bottom: var(--space-4); }
+.form-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-2);
+}
+.form-hint { font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1); }
+
+.input, .textarea {
+  width: 100%;
+  background: var(--surface3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  transition: var(--transition-base);
+}
+.input.mono, .textarea.mono { font-family: var(--font-display); }
+.input:hover, .textarea:hover { border-color: var(--border-hi); }
+.input:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+.input::placeholder, .textarea::placeholder { color: var(--text-muted); }
+.textarea { resize: vertical; min-height: 80px; font-family: var(--font-display); }
+
+/* Custom Dropdown (full v2 implementation) */
+.dropdown { position: relative; display: inline-block; width: 100%; }
+.dropdown-trigger {
+  width: 100%;
+  background: var(--surface3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  padding-right: var(--space-8);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: var(--transition-base);
+}
+.dropdown-trigger:hover { border-color: var(--border-hi); }
+.dropdown.open .dropdown-trigger { outline: none; border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
+.dropdown-trigger::after {
+  content: '';
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--text-dim);
+  border-bottom: 1.5px solid var(--text-dim);
+  transform: translateY(-70%) rotate(45deg);
+  transition: var(--transition-base);
+  pointer-events: none;
+}
+.dropdown.open .dropdown-trigger::after { transform: translateY(-30%) rotate(-135deg); }
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+  padding: var(--space-1);
+  display: none;
+}
+.dropdown.open .dropdown-menu { display: block; }
+.dropdown-option {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.dropdown-option:hover { background: var(--surface3); color: var(--text-bright); }
+.dropdown-option.selected { background: var(--accent-bg); color: var(--accent); }
+.dropdown-option.selected::after { content: '✓'; margin-left: auto; color: var(--accent); }
+
+/* Toggle, Checkbox (v2) */
+.toggle { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  transition: var(--transition-base);
+}
+.toggle-slider::before {
+  content: ''; position: absolute; left: 2px; top: 2px;
+  width: 14px; height: 14px;
+  background: var(--text-dim);
+  border-radius: var(--radius-full);
+  transition: var(--transition-base);
+}
+.toggle input:checked + .toggle-slider { background: var(--accent-bg); border-color: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
+
+.checkbox {
+  position: relative; display: inline-flex; align-items: center;
+  gap: var(--space-2); cursor: pointer; user-select: none;
+}
+.checkbox input { opacity: 0; position: absolute; width: 16px; height: 16px; cursor: pointer; }
+.checkbox-box {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
+  flex-shrink: 0;
+}
+.checkbox:hover .checkbox-box { border-color: var(--border-hi); }
+.checkbox input:checked ~ .checkbox-box { background: var(--accent); border-color: var(--accent); }
+.checkbox input:checked ~ .checkbox-box::after {
+  content: '✓'; color: var(--bg); font-size: 11px; font-weight: 700; line-height: 1;
+}
+
+/* ============================================================
+   CARDS, STATS, BADGES (from v2)
+   ============================================================ */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-4) 0;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.card-header .card-title { margin: 0; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+.stat-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  transition: var(--transition-base);
+}
+.stat-block:hover { border-color: var(--border-hi); }
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  color: var(--text-bright);
+  line-height: 1;
+}
+.stat-value.accent  { color: var(--accent); }
+.stat-value.danger  { color: var(--danger); }
+.stat-value.warning { color: var(--warning); }
+.stat-value.success { color: var(--success); }
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: var(--space-2);
+}
+.stat-delta {
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+}
+.stat-delta.up   { color: var(--success); }
+.stat-delta.down { color: var(--danger); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  white-space: nowrap;
+  background: var(--surface3);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.badge.accent  { background: var(--accent-bg);  color: var(--accent);  border-color: var(--accent); }
+.badge.accent2 { background: var(--accent2-bg); color: var(--accent2); border-color: var(--accent2); }
+.badge.success { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+.badge.danger  { background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger); }
+.badge.warning { background: var(--warning-bg); color: var(--warning); border-color: var(--warning); }
+.badge.tlp-clear  { background: var(--surface3); color: var(--text-dim); }
+.badge.tlp-green  { color: var(--accent3); border-color: var(--accent3); background: transparent; }
+.badge.tlp-amber  { color: var(--warning); border-color: var(--warning); background: transparent; }
+.badge.tlp-amber-strict {
+  color: var(--warning); border-color: var(--warning);
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 3px,
+    var(--warning-bg) 3px, var(--warning-bg) 6px
+  );
+}
+.badge.tlp-red { background: var(--danger); color: var(--bg); border-color: var(--danger); font-weight: 600; }
+
+/* Progress */
+.progress-track {
+  width: 100%; height: 6px;
+  background: var(--surface3);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+.progress-fill.success { background: var(--success); }
+.progress-fill.warning { background: var(--warning); }
+.progress-fill.danger  { background: var(--danger); }
+
+/* Data table */
+.data-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.data-table thead th {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.data-table tbody td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.data-table tbody tr:hover { background: var(--surface); }
+
+/* ============================================================
+   RESPONSIVE — Mobile drawer pattern
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .app { grid-template-columns: var(--sidebar-collapsed) 1fr; }
+  .app.sidebar-collapsed { grid-template-columns: var(--sidebar-collapsed) 1fr; }
+  .sidebar-item-label { display: none; }
+  .sidebar-section-label { opacity: 0; height: 1px; }
+}
+
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas: "topbar" "main";
+  }
+  .sidebar {
+    position: fixed;
+    top: var(--topbar-height);
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    transition: transform var(--transition-base);
+    z-index: 99;
+  }
+  .app.mobile-drawer-open .sidebar { transform: translateX(0); }
+  .topbar-mobile-toggle { display: flex !important; }
+}
+
+.topbar-mobile-toggle { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="topbar-icon-btn topbar-mobile-toggle" onclick="document.getElementById('app').classList.toggle('mobile-drawer-open')">☰</button>
+    <div class="topbar-brand">FRAG<span class="accent">·CHAIN</span></div>
+
+    <div class="topbar-search">
+      <input type="text" placeholder="Search CVEs, chains, rules, techniques...">
+      <span class="topbar-search-kbd">⌘K</span>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="topbar-status">
+      <span class="status-indicator ok" title="LiteLLM connection healthy">LITELLM</span>
+      <span class="status-indicator ok" title="Qdrant operational">QDRANT</span>
+      <span class="status-indicator warn" title="OpenCTI: 3 sync errors in last hour">OPENCTI</span>
+      <span class="status-indicator ok" title="Sigma repo synced 12min ago">SIGMA</span>
+    </div>
+
+    <button class="topbar-icon-btn" title="Notifications">
+      <span>🔔</span>
+      <span class="badge-dot">3</span>
+    </button>
+
+    <button class="topbar-user">
+      <div class="topbar-user-avatar">AD</div>
+      <span class="topbar-user-name">admin</span>
+    </button>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-content">
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Overview</div>
+        <a class="sidebar-item active" data-tooltip="Dashboard">
+          <span class="sidebar-item-icon">⊞</span>
+          <span class="sidebar-item-label">Dashboard</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Intel</div>
+        <a class="sidebar-item" data-tooltip="CVEs">
+          <span class="sidebar-item-icon">⚠</span>
+          <span class="sidebar-item-label">CVEs</span>
+          <span class="sidebar-item-badge">23</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="Chains">
+          <span class="sidebar-item-icon">⛓</span>
+          <span class="sidebar-item-label">Chains</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="ATT&CK Matrix">
+          <span class="sidebar-item-icon">▦</span>
+          <span class="sidebar-item-label">ATT&CK Matrix</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Detect</div>
+        <a class="sidebar-item" data-tooltip="Review Queue">
+          <span class="sidebar-item-icon">◐</span>
+          <span class="sidebar-item-label">Review Queue</span>
+          <span class="sidebar-item-badge warning">7</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="Sigma Library">
+          <span class="sidebar-item-icon">≣</span>
+          <span class="sidebar-item-label">Sigma Library</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Automation</div>
+        <a class="sidebar-item" data-tooltip="Imports">
+          <span class="sidebar-item-icon">↓</span>
+          <span class="sidebar-item-label">Imports</span>
+          <span class="sidebar-item-badge">2</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="Prompts">
+          <span class="sidebar-item-icon">◇</span>
+          <span class="sidebar-item-label">Prompts</span>
+          <span class="sidebar-item-badge success">A/B</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Config</div>
+        <a class="sidebar-item" data-tooltip="Connectors">
+          <span class="sidebar-item-icon">⊟</span>
+          <span class="sidebar-item-label">Connectors</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="Commons">
+          <span class="sidebar-item-icon">⌬</span>
+          <span class="sidebar-item-label">Commons</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="Settings">
+          <span class="sidebar-item-icon">⚙</span>
+          <span class="sidebar-item-label">Settings</span>
+        </a>
+        <a class="sidebar-item" data-tooltip="Identity (placeholder)">
+          <span class="sidebar-item-icon">◯</span>
+          <span class="sidebar-item-label">Identity</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('app').classList.toggle('sidebar-collapsed')">
+        <span class="sidebar-collapse-btn-icon">«</span>
+        <span class="sidebar-collapse-btn-label" style="margin-left: 8px">COLLAPSE</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="context-bar">
+      <div class="context-bar-title">
+        <span>Dashboard</span>
+        <span class="text-xs text-dim">· last refreshed 2 min ago</span>
+      </div>
+      <div class="context-bar-spacer"></div>
+      <button class="btn sm ghost">REFRESH</button>
+      <button class="btn sm ghost">EXPORT</button>
+    </div>
+
+    <div class="main-content">
+
+      <!-- STATS GRID -->
+      <div class="stat-grid" style="margin-bottom: var(--space-6)">
+        <div class="stat-block">
+          <div class="stat-value accent">23</div>
+          <div class="stat-label">CVEs / 24hr</div>
+          <div class="stat-delta up">↑ 8 from yesterday</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value warning">68<span style="font-size: var(--text-xl)">%</span></div>
+          <div class="stat-label">Sigma coverage</div>
+          <div class="stat-delta up">↑ 3% this week</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value warning">7</div>
+          <div class="stat-label">Pending review</div>
+          <div class="stat-delta">2 critical priority</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value danger">4</div>
+          <div class="stat-label">KEV gaps</div>
+          <div class="stat-delta down">Actively exploited</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value">12</div>
+          <div class="stat-label">Staged CVEs</div>
+          <div class="stat-delta">Awaiting approval</div>
+        </div>
+      </div>
+
+      <!-- RECENT CVEs TABLE -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Recent CVEs · Last 24 Hours</div>
+          <button class="btn sm ghost">VIEW ALL →</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>CVE ID</th>
+              <th>CVSS</th>
+              <th>KEV</th>
+              <th>STATUS</th>
+              <th>TLP</th>
+              <th>RULES</th>
+              <th>PUBLISHED</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono"><a style="color: var(--accent); text-decoration: none">CVE-2026-43284</a></td>
+              <td><span class="badge danger">9.8</span></td>
+              <td><span class="badge danger">KEV</span></td>
+              <td><span class="badge success">COMPLETE</span></td>
+              <td><span class="badge tlp-clear">CLEAR</span></td>
+              <td class="mono">4</td>
+              <td class="mono text-dim">2026-05-01</td>
+            </tr>
+            <tr>
+              <td class="mono"><a style="color: var(--accent); text-decoration: none">CVE-2026-38214</a></td>
+              <td><span class="badge danger">10.0</span></td>
+              <td><span class="badge danger">KEV</span></td>
+              <td><span class="badge warning">SYNTHESIZING</span></td>
+              <td><span class="badge tlp-green">GREEN</span></td>
+              <td class="mono text-dim">—</td>
+              <td class="mono text-dim">2026-05-12</td>
+            </tr>
+            <tr>
+              <td class="mono"><a style="color: var(--accent); text-decoration: none">CVE-2026-31431</a></td>
+              <td><span class="badge warning">8.4</span></td>
+              <td><span class="badge">—</span></td>
+              <td><span class="badge accent">PENDING</span></td>
+              <td><span class="badge tlp-clear">CLEAR</span></td>
+              <td class="mono text-dim">—</td>
+              <td class="mono text-dim">2026-05-12</td>
+            </tr>
+            <tr>
+              <td class="mono"><a style="color: var(--accent); text-decoration: none">CVE-2026-22918</a></td>
+              <td><span class="badge warning">7.5</span></td>
+              <td><span class="badge">—</span></td>
+              <td><span class="badge accent2">STAGED</span></td>
+              <td><span class="badge tlp-amber">AMBER</span></td>
+              <td class="mono text-dim">—</td>
+              <td class="mono text-dim">2026-04-28</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="height: var(--space-6)"></div>
+
+      <!-- Two-column row -->
+      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--space-4)">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">ATT&CK Coverage Overview</div>
+            <button class="btn sm ghost">VIEW FULL MATRIX →</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; padding: var(--space-3) 0">
+            <!-- 14 tactic columns, simplified -->
+            <script>document.write('<div></div>'.repeat(0))</script>
+            <!-- Just visual placeholder cells -->
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; padding: var(--space-2) 0;">
+            <!-- Generate cells via inline script -->
+          </div>
+          <div id="mini-heatmap" style="display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px;"></div>
+          <div style="display: flex; gap: var(--space-3); margin-top: var(--space-4); font-size: var(--text-xs); color: var(--text-dim)">
+            <span style="display: inline-flex; align-items: center; gap: 4px"><span style="width:10px;height:10px;background:var(--success);border-radius:2px"></span>Covered</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px"><span style="width:10px;height:10px;background:var(--warning);border-radius:2px"></span>Partial</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px"><span style="width:10px;height:10px;background:var(--danger);border-radius:2px"></span>Gap</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px"><span style="width:10px;height:10px;background:var(--surface3);border-radius:2px"></span>No data</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Review Queue · Top 5</div>
+            <span class="badge warning">7 PENDING</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-3)">
+            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border)">
+              <span class="badge danger">CRIT</span>
+              <span class="mono text-xs">CVE-2026-43284</span>
+              <span class="mono text-xs text-dim">T1068</span>
+              <span class="text-xs text-muted" style="margin-left: auto">12 min</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border)">
+              <span class="badge warning">HIGH</span>
+              <span class="mono text-xs">CVE-2026-38214</span>
+              <span class="mono text-xs text-dim">T1190</span>
+              <span class="text-xs text-muted" style="margin-left: auto">34 min</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border)">
+              <span class="badge warning">HIGH</span>
+              <span class="mono text-xs">CVE-2026-22918</span>
+              <span class="mono text-xs text-dim">T1059</span>
+              <span class="text-xs text-muted" style="margin-left: auto">2h</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border)">
+              <span class="badge accent">MED</span>
+              <span class="mono text-xs">CVE-2025-99102</span>
+              <span class="mono text-xs text-dim">T1003</span>
+              <span class="text-xs text-muted" style="margin-left: auto">4h</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0">
+              <span class="badge accent">MED</span>
+              <span class="mono text-xs">CVE-2025-87711</span>
+              <span class="mono text-xs text-dim">T1055</span>
+              <span class="text-xs text-muted" style="margin-left: auto">5h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// Generate mini heatmap with random coverage states
+const states = ['success', 'success', 'success', 'warning', 'warning', 'danger', 'no_data', 'no_data', 'no_data'];
+const colors = {
+  success: 'var(--success)',
+  warning: 'var(--warning)',
+  danger: 'var(--danger)',
+  no_data: 'var(--surface3)'
+};
+const heatmap = document.getElementById('mini-heatmap');
+for (let col = 0; col < 14; col++) {
+  for (let row = 0; row < 6; row++) {
+    const state = states[Math.floor(Math.random() * states.length)];
+    const cell = document.createElement('div');
+    cell.style.cssText = `aspect-ratio: 1; background: ${colors[state]}; opacity: 0.7; border-radius: 2px;`;
+    heatmap.appendChild(cell);
+  }
+}
+
+// Dropdown
+function toggleDropdown(id) {
+  const d = document.getElementById(id);
+  d.classList.toggle('open');
+  document.querySelectorAll('.dropdown.open').forEach(other => {
+    if (other.id !== id) other.classList.remove('open');
+  });
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dropdown')) {
+    document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+  }
+});
+
+// Sidebar item active state
+document.querySelectorAll('.sidebar-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelector('.context-bar-title span').textContent =
+      item.querySelector('.sidebar-item-label').textContent;
+  });
+});
+</script>
+
+</body>
+</html>

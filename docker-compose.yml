@@ -1,0 +1,302 @@
+name: fragchain
+
+# ----------------------------------------------------------------------
+# F-001 — credentials use ${VAR:?...} required-substitution form so
+# `docker compose up` against an unconfigured .env fails immediately
+# instead of booting with empty / placeholder values.
+#
+# Non-secret operational settings keep the ${VAR:-default} form for
+# convenience. Anything carrying a credential MUST stay in the strict
+# form so production cannot accidentally regress.
+# ----------------------------------------------------------------------
+
+x-api-env: &api-env
+  APP_ENV: ${APP_ENV:?APP_ENV must be set (development|staging|production)}
+  APP_HOST: ${APP_HOST:-0.0.0.0}
+  APP_SECRET_KEY: ${APP_SECRET_KEY:?APP_SECRET_KEY must be set to a strong random value}
+  APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+  ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fragchain.local}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set to a strong unique value (admin/admin is rejected at boot)}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to a strong random value}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+  JWT_EXPIRY_HOURS: ${JWT_EXPIRY_HOURS:-12}
+  POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_DB: ${POSTGRES_DB:-fragchain}
+  POSTGRES_USER: ${POSTGRES_USER:-fragchain}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set (redis-server runs with --requirepass)}
+  REDIS_DB: ${REDIS_DB:-0}
+  MINIO_HOST: ${MINIO_HOST:-minio}
+  MINIO_PORT: ${MINIO_PORT:-9000}
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fragchain}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+  MINIO_BUCKET: ${MINIO_BUCKET:-fragchain}
+  MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+  QDRANT_HOST: ${QDRANT_HOST:-qdrant}
+  QDRANT_PORT: ${QDRANT_PORT:-6333}
+  QDRANT_API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY must be set (Qdrant has auth enabled)}
+  LITELLM_BASE_URL: ${LITELLM_BASE_URL:?LITELLM_BASE_URL must be set}
+  LITELLM_API_KEY: ${LITELLM_API_KEY:?LITELLM_API_KEY must be set}
+  LITELLM_CHAT_MODEL: ${LITELLM_CHAT_MODEL:-claude-opus}
+  LITELLM_EMBEDDING_MODEL: ${LITELLM_EMBEDDING_MODEL:-nomic-embed-text}
+  LITELLM_VERIFY_TLS: ${LITELLM_VERIFY_TLS:-true}
+  LITELLM_CA_BUNDLE: ${LITELLM_CA_BUNDLE:-}
+  MAX_LIVE_CVE_PER_HOUR: ${MAX_LIVE_CVE_PER_HOUR:-10}
+  MAX_HISTORICAL_CVE_PER_DAY: ${MAX_HISTORICAL_CVE_PER_DAY:-20}
+  AUTO_PROCESS_KEV: ${AUTO_PROCESS_KEV:-true}
+  # F-001: default FALSE — must stay off unless an operator explicitly opts in
+  # for offline dev. Production rejects true outright.
+  COMMONS_ALLOW_MOCK_FALLBACK: ${COMMONS_ALLOW_MOCK_FALLBACK:-false}
+  COMMONS_SYNC_TIMEOUT_SECONDS: ${COMMONS_SYNC_TIMEOUT_SECONDS:-60}
+  COMMONS_GITHUB_API_BASE: ${COMMONS_GITHUB_API_BASE:-https://api.github.com}
+  CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS must be set (comma-separated origins)}
+
+# ----------------------------------------------------------------------
+# Container hardening (SAST S-013 / S-016).
+#
+# `no-new-privileges:true` is safe on every service — the stock images
+# drop privileges via su-exec/gosu (a setuid() syscall guarded by a
+# capability), not a setuid binary, so the no_new_privs flag does not
+# block their entrypoints.
+#
+# `cap_drop: [ALL]` is applied only to the services we build and now run
+# as a non-root `app` user (Dockerfile.api / Dockerfile.worker / the
+# nginx-unprivileged UI) — they need no Linux capabilities. The stock
+# data-tier images (postgres/redis/minio/qdrant) and the reverse-proxy
+# nginx keep their default capability set because their entrypoints
+# chown the data dir / bind low ports on first boot; dropping ALL there
+# needs a tested per-image cap_add allowlist (tracked as a follow-up).
+# ----------------------------------------------------------------------
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+
+x-app-hardening: &app-hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    <<: *hardening
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fragchain}
+      POSTGRES_USER: ${POSTGRES_USER:-fragchain}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fragchain} -d ${POSTGRES_DB:-fragchain}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    <<: *hardening
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    # SAST S-015: pinned (was :latest) — Dependabot/renovate can bump + add a digest.
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    <<: *hardening
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fragchain}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    volumes:
+      - minio_data:/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    # SAST S-015: pinned (was :latest) — Dependabot/renovate can bump + add a digest.
+    image: qdrant/qdrant:v1.18.2
+    <<: *hardening
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY must be set}
+      QDRANT__SERVICE__HTTP_PORT: 6333
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  fragchain-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    <<: *app-hardening
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+    networks:
+      # data: Postgres/Redis/MinIO/Qdrant (internal, no internet)
+      # egress: outbound to LiteLLM + commons + Sigma git
+      # app: reachable by the nginx reverse proxy
+      - data
+      - egress
+      - app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  fragchain-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    <<: *app-hardening
+    restart: unless-stopped
+    command: ["celery", "-A", "fragchain.worker", "worker", "--loglevel=INFO", "--concurrency=2"]
+    environment:
+      <<: *api-env
+    networks:
+      # data: backing services; egress: LiteLLM + Sigma/commons git clone
+      - data
+      - egress
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      fragchain-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A fragchain.worker inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  fragchain-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    <<: *app-hardening
+    restart: unless-stopped
+    command: ["celery", "-A", "fragchain.worker", "beat", "--loglevel=INFO"]
+    environment:
+      <<: *api-env
+    networks:
+      # beat only publishes scheduled tasks to the Redis broker — no internet.
+      - data
+    depends_on:
+      redis:
+        condition: service_healthy
+      fragchain-api:
+        condition: service_healthy
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    <<: *app-hardening
+    restart: unless-stopped
+    command: ["celery", "-A", "fragchain.worker", "flower", "--port=5555", "--address=0.0.0.0"]
+    environment:
+      <<: *api-env
+    networks:
+      # flower reads task state from the Redis broker — no internet.
+      - data
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  fragchain-ui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    <<: *app-hardening
+    restart: unless-stopped
+    networks:
+      - app
+    # Runtime is nginx-unprivileged listening on 8080 (uid 101). See
+    # frontend/Dockerfile + frontend/nginx-spa.conf. The reverse-proxy
+    # service below points at fragchain-ui:8080 to match.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  nginx:
+    image: nginx:1.25-alpine
+    <<: *hardening
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - app
+    depends_on:
+      fragchain-api:
+        condition: service_healthy
+      fragchain-ui:
+        condition: service_healthy
+
+networks:
+  # SAST S-014: the data tier is isolated from the internet. A compromised
+  # Postgres/Redis/MinIO/Qdrant container cannot initiate outbound traffic.
+  data:
+    driver: bridge
+    internal: true
+  # Only the API + worker (which legitimately call LiteLLM and clone git
+  # repos) join an egress-capable network.
+  egress:
+    driver: bridge
+  # Inbound reverse-proxy path: nginx <-> api / ui.
+  app:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  qdrant_data:

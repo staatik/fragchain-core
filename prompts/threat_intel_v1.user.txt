@@ -1,0 +1,7 @@
+Detection questions:
+{detection_questions}
+
+RAG results (excerpts from pasted sources):
+{rag_results}
+
+{pass_hint}

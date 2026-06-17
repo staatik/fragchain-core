@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Pre-commit gate: block absolute host paths from being committed into
+# Markdown docs. The patterns /Users/<name>/ and /home/<name>/ leak the
+# committer's username and machine layout — use <repo-root> or repo-relative
+# paths instead.
+#
+# Activate per checkout (one-time, set on the common git dir so it applies
+# to every worktree):
+#
+#     git config core.hooksPath scripts/hooks
+#
+# Bypass an individual line by appending the marker `# allow-host-path`
+# on that same line (use sparingly).
+
+set -euo pipefail
+
+pattern='/(Users|home)/[A-Za-z][A-Za-z0-9_.-]*/'
+violations=0
+report=""
+
+while IFS= read -r -d '' file; do
+    [ -f "$file" ] || continue
+    case "$file" in
+        *.md|*.markdown) ;;
+        *) continue ;;
+    esac
+
+    # Match staged blob (handles new/modified files identically), strip lines
+    # that opt out via the allow-host-path marker.
+    matches=$(git show ":$file" 2>/dev/null \
+        | grep -nE "$pattern" \
+        | grep -v 'allow-host-path' || true)
+
+    if [ -n "$matches" ]; then
+        violations=$((violations + 1))
+        report+=$'\n'"  $file:"$'\n'
+        while IFS= read -r line; do
+            report+="    $line"$'\n'
+        done <<< "$matches"
+    fi
+done < <(git diff --cached --name-only -z --diff-filter=ACM)
+
+if [ "$violations" -gt 0 ]; then
+    {
+        echo "pre-commit: absolute host paths found in staged Markdown."
+        echo "Replace /Users/<name>/... or /home/<name>/... with <repo-root>"
+        echo "or a repo-relative path. Append '# allow-host-path' on a line"
+        echo "to intentionally bypass."
+        echo "$report"
+    } >&2
+    exit 1
+fi

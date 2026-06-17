@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fragchain"
+version = "0.1.0"
+description = "FragChain — collaborative detection engineering platform"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+authors = [{ name = "FragChain" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "sqlalchemy[asyncio]>=2.0.27",
+    "alembic>=1.13",
+    "asyncpg>=0.29",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "celery>=5.3",
+    "redis>=5.0",
+    "structlog>=24.1",
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0,<5.0",
+    "minio>=7.2",
+    "qdrant-client>=1.8",
+    "openai>=1.13",
+    "pysigma>=0.11",
+    "httpx>=0.27",
+    "tiktoken>=0.6",
+    "pyyaml>=6.0",
+    "gitpython>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.3",
+    "mypy>=1.8",
+    "aiosqlite>=0.19",
+]
+
+[project.entry-points."fragchain.providers"]
+litellm = "fragchain.llm.litellm_provider:LiteLLMProvider"
+
+[tool.setuptools.packages.find]
+include = ["fragchain*"]
+exclude = ["tests*", "frontend*", "scripts*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

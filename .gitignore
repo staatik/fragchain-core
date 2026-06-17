@@ -1,0 +1,103 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# === Node / Frontend ===
+node_modules/
+dist/
+build/
+.vite/
+*.local
+*.tsbuildinfo
+
+# === Local persistent data (mounted volumes) ===
+data/
+postgres-data/
+redis-data/
+minio-data/
+qdrant-data/
+sigma-repos/
+ctid-mappings/
+attck-stix/
+
+# === Logs ===
+*.log
+logs/
+
+# === Secrets and local config ===
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+credentials.json
+credentials.yaml
+credentials.yml
+secrets.json
+secrets.yaml
+secrets.yml
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+*.kdbx
+nginx/certs/
+!ssh/known_hosts
+
+# === Scanner / SAST output (may include sensitive paths or findings) ===
+.semgrep/
+.semgrepignore
+semgrep-output.*
+.bandit
+trivy-results.*
+.snyk
+.dependency-check/
+
+# === Coverage/profiler temp files ===
+.profraw
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.fleet/
+
+# === Build artifacts ===
+*.tar.gz
+*.whl
+.installed.cfg
+
+# === Misc dev junk ===
+.cache/
+tmp/
+scratch/
+
+# brainstorming visual companion mockups
+.superpowers/
+
+# Machine-local preview/dev-server config (contains absolute paths — §19)
+.claude/launch.json

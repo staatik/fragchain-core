@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-12T00:00:00Z",
+  "connectors": [
+    {
+      "name": "opencti",
+      "package": "fragchain-connector-opencti",
+      "type": "source_stream",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-opencti",
+      "version": "1.2.0",
+      "health": "active",
+      "description": "OpenCTI GraphQL source stream — CVE objects with full STIX provenance."
+    },
+    {
+      "name": "nvd2",
+      "package": "fragchain-connector-nvd2",
+      "type": "source_stream",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-nvd2",
+      "version": "0.9.0",
+      "health": "active",
+      "description": "NVD 2.0 REST API direct source stream — fallback when no OpenCTI is available."
+    },
+    {
+      "name": "epss",
+      "package": "fragchain-connector-epss",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-epss",
+      "version": "0.4.1",
+      "health": "active",
+      "description": "EPSS exploitation-probability score enrichment from FIRST."
+    },
+    {
+      "name": "ctid",
+      "package": "fragchain-connector-ctid",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-ctid",
+      "version": "1.0.0",
+      "health": "active",
+      "description": "Center for Threat-Informed Defense CVE → ATT&CK technique mappings."
+    },
+    {
+      "name": "kev",
+      "package": "fragchain-connector-kev",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-kev",
+      "version": "0.6.0",
+      "health": "active",
+      "description": "CISA Known Exploited Vulnerabilities catalog enrichment."
+    },
+    {
+      "name": "attackerkb",
+      "package": "fragchain-connector-attackerkb",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-attackerkb",
+      "version": "0.3.0",
+      "health": "active",
+      "description": "Rapid7 AttackerKB scores + analyst commentary as RAG documents."
+    },
+    {
+      "name": "exploitdb",
+      "package": "fragchain-connector-exploitdb",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-exploitdb",
+      "version": "0.2.0",
+      "health": "active",
+      "description": "Exploit-DB proof-of-concept reference enrichment."
+    },
+    {
+      "name": "osssecurity",
+      "package": "fragchain-connector-osssecurity",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-osssecurity",
+      "version": "0.2.0",
+      "health": "active",
+      "description": "oss-security mailing-list archive documents for RAG synthesis."
+    },
+    {
+      "name": "github",
+      "package": "fragchain-connector-github",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-github",
+      "version": "0.3.0",
+      "health": "active",
+      "description": "GitHub POC repository discovery for CVE references."
+    },
+    {
+      "name": "vendor-redhat",
+      "package": "fragchain-connector-vendor-redhat",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-vendor-redhat",
+      "version": "0.2.0",
+      "health": "active",
+      "description": "Red Hat security data enrichment (RHSA + CVE database)."
+    },
+    {
+      "name": "vendor-msrc",
+      "package": "fragchain-connector-vendor-msrc",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-vendor-msrc",
+      "version": "0.2.0",
+      "health": "active",
+      "description": "Microsoft Security Response Center CVRF enrichment."
+    },
+    {
+      "name": "vendor-ubuntu",
+      "package": "fragchain-connector-vendor-ubuntu",
+      "type": "enrichment",
+      "official": true,
+      "maintainer": "fragchain-core-team",
+      "repository": "github.com/fragchain/connector-vendor-ubuntu",
+      "version": "0.2.0",
+      "health": "active",
+      "description": "Ubuntu security tracker advisories enrichment."
+    }
+  ]
+}

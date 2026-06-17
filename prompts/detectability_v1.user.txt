@@ -1,0 +1,19 @@
+CVE: {cve_id}
+
+Vulnerability profile (Loop 1 output):
+{vuln_profile}
+
+Behavioral indicators observed per telemetry category (Loop 2 output;
+counts and samples):
+{indicators_summary}
+
+Deterministic gate result: {gate_summary}
+
+Unanswered detection questions:
+{unanswered}
+
+Assess detectability for a typical enterprise defender. Return JSON with
+keys: detectability_class, rationale, confidence (0..1),
+observable_behaviors, required_telemetry, optional_telemetry, blind_spots,
+assumptions, recommended_artifacts (type/reason/priority),
+skipped_artifacts (type/reason), references.

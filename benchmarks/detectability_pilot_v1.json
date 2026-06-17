@@ -1,0 +1,1059 @@
+{
+  "name": "detectability_pilot_v1",
+  "description": "30-case pilot fixture for scoring the DetectabilityClassifier; 6 cases per class. Labels owner-adjudicated 2026-06-13 — all 30 draft labels accepted as drafted.",
+  "cases": [
+    {
+      "id": "case-01-log4shell",
+      "cve": {
+        "cve_id": "CVE-2021-44228",
+        "title": "Apache Log4j2 JNDI RCE (Log4Shell)",
+        "description": "Log4j2 JNDI lookup allows attacker-controlled LDAP/RMI URLs in logged strings to load and execute remote code on the JVM host."
+      },
+      "vuln_profile": {
+        "vuln_class": "deserialization",
+        "affected_component": "log4j-core JNDI lookup",
+        "trigger_conditions": ["attacker-controlled string reaches a logging call"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "outbound LDAP/RMI from a JVM process to external host on port 389 or 1099"},
+            {"value": "subsequent HTTP fetch of a remote Java class file from attacker-controlled host"}
+          ],
+          "process": [
+            {"value": "java process spawning a shell child (sh, bash, cmd, powershell)"}
+          ],
+          "command_line": [
+            {"value": "${jndi:ldap://...} pattern appearing in HTTP request headers or POST body fields"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["network", "process", "command_line"],
+        "empty_categories": ["file", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "directly_detectable",
+        "notes": "Strong stable network egress + java->shell child process + ${jndi:} payload signature; high-fidelity in standard telemetry."
+      }
+    },
+    {
+      "id": "case-02-shellshock",
+      "cve": {
+        "cve_id": "CVE-2014-6271",
+        "title": "GNU Bash Shellshock Remote Code Execution",
+        "description": "Bash incorrectly processes trailing strings after function definitions in environment variables, allowing remote code execution via crafted HTTP headers in CGI scripts."
+      },
+      "vuln_profile": {
+        "vuln_class": "command injection",
+        "affected_component": "GNU Bash environment variable parsing",
+        "trigger_conditions": ["HTTP server passes environment variables to Bash-based CGI handler"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "process": [
+            {"value": "httpd or apache2 spawning bash child that spawns curl, wget, or nc"}
+          ],
+          "command_line": [
+            {"value": "() { :;}; pattern in HTTP User-Agent, Referer, or Cookie headers"},
+            {"value": "outbound network utility (curl/wget/nc) executed from web server child process"}
+          ],
+          "network": [
+            {"value": "outbound connection to external host initiated by web server process"}
+          ],
+          "parent_child": [
+            {"value": "httpd -> bash -> curl/wget/nc process lineage visible in audit logs"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["process", "command_line", "network", "parent_child"],
+        "empty_categories": ["file", "registry", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "directly_detectable",
+        "notes": "httpd->bash->shell_child parent chain + () {:}; header signature are stable and high-fidelity in web server logs and auditd."
+      }
+    },
+    {
+      "id": "case-03-outlook-ntlm",
+      "cve": {
+        "cve_id": "CVE-2023-23397",
+        "title": "Microsoft Outlook NTLM Credential Leak via UNC Path",
+        "description": "Outlook processes a crafted calendar reminder with a UNC path in the sound file field, triggering an automatic NTLM authentication to an attacker-controlled SMB server and leaking the user's Net-NTLMv2 hash."
+      },
+      "vuln_profile": {
+        "vuln_class": "credential leak",
+        "affected_component": "Microsoft Outlook reminder notification handler",
+        "trigger_conditions": ["victim receives a specially crafted meeting invite; no user interaction required"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "outlook.exe initiating SMB connection (port 445) to a non-internal/non-fileserver IP"},
+            {"value": "NTLM Type-1/Type-3 authentication traffic to external SMB host"}
+          ],
+          "process": [
+            {"value": "outlook.exe making direct outbound network connection without browser/proxy intermediary"}
+          ],
+          "command_line": [
+            {"value": "UNC path (\\\\external-ip\\share) present in calendar item sound file field"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["network", "process", "command_line"],
+        "empty_categories": ["file", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "directly_detectable",
+        "notes": "outlook.exe -> anomalous SMB egress to non-fileserver is a stable, unique signal detectable with standard Windows network telemetry."
+      }
+    },
+    {
+      "id": "case-04-printnightmare-rce",
+      "cve": {
+        "cve_id": "CVE-2021-34527",
+        "title": "Windows Print Spooler RCE (PrintNightmare)",
+        "description": "Windows Print Spooler service allows authenticated remote users to install printer drivers, which executes arbitrary DLLs with SYSTEM privileges via the AddPrinterDriverEx() RPC call."
+      },
+      "vuln_profile": {
+        "vuln_class": "privilege escalation",
+        "affected_component": "Windows Print Spooler (spoolsv.exe) RPC interface",
+        "trigger_conditions": ["attacker has network access and any domain credential"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "process": [
+            {"value": "spoolsv.exe loading a DLL from a UNC path (\\\\attacker\\share\\evil.dll)"},
+            {"value": "spoolsv.exe spawning a child process (cmd, powershell, mshta)"}
+          ],
+          "file": [
+            {"value": "malicious DLL written to C:\\Windows\\System32\\spool\\drivers\\x64\\3\\ directory"}
+          ],
+          "network": [
+            {"value": "spoolsv.exe making SMB connection (port 445) to external or unexpected host to fetch driver DLL"}
+          ],
+          "api_call": [
+            {"value": "AddPrinterDriverEx RPC call with DRIVER_INFO_2 pointing to remote UNC path"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["process", "file", "network", "api_call"],
+        "empty_categories": ["command_line", "registry", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "indirectly_detectable",
+        "notes": "spoolsv.exe DLL load from UNC + driver write to spool directory + RPC call pattern is a high-fidelity, well-documented detection. [Adjudicated 2026-06-14: reclassified indirectly_detectable — the reliable signal is the spoolsv child / DLL-load consequence, not the RPC exploit itself.]"
+      }
+    },
+    {
+      "id": "case-05-zerologon",
+      "cve": {
+        "cve_id": "CVE-2020-1472",
+        "title": "Netlogon Elevation of Privilege (Zerologon)",
+        "description": "A cryptographic flaw in Microsoft's Netlogon Remote Protocol allows an unauthenticated attacker on the network to reset a domain controller's machine account password, leading to domain compromise."
+      },
+      "vuln_profile": {
+        "vuln_class": "authentication bypass",
+        "affected_component": "Microsoft Netlogon Remote Protocol (MS-NRPC)",
+        "trigger_conditions": ["attacker has network connectivity to a domain controller on port 445/139"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "burst of Netlogon RPC (MS-NRPC) authentication attempts with zeroed client challenge bytes from a single source"}
+          ],
+          "api_call": [
+            {"value": "NetrServerAuthenticate3 calls with all-zero ClientCredential field"},
+            {"value": "NetrServerPasswordSet2 call immediately after successful authentication (credential reset)"}
+          ],
+          "process": [
+            {"value": "lsass.exe handling excessive Netlogon secure channel setup requests from one IP in short timeframe"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["network", "api_call", "process"],
+        "empty_categories": ["command_line", "file", "registry", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "directly_detectable",
+        "notes": "Zero-filled Netlogon credential + burst pattern + password-reset RPC is a unique, published detection with Windows Security Event ID 4742 correlation."
+      }
+    },
+    {
+      "id": "case-06-eternalblue",
+      "cve": {
+        "cve_id": "CVE-2017-0144",
+        "title": "EternalBlue SMBv1 Remote Code Execution",
+        "description": "A buffer overflow in the Windows SMB Server allows remote code execution via a specially crafted SMBv1 packet, exploited by WannaCry and NotPetya ransomware campaigns."
+      },
+      "vuln_profile": {
+        "vuln_class": "memory corruption",
+        "affected_component": "Windows SMBv1 server (srv.sys)",
+        "trigger_conditions": ["SMBv1 enabled and reachable; no authentication required"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "malformed SMBv1 TRANS2 request with oversized ParameterCount field inbound on port 445"},
+            {"value": "lateral movement to port 445 across subnet following initial compromise"}
+          ],
+          "process": [
+            {"value": "svchost.exe (LanmanServer) spawning unexpected child process post-exploit"}
+          ],
+          "api_call": [
+            {"value": "kernel-level shellcode execution via pool corruption triggering abnormal syscall sequence in srv.sys"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["network", "process", "api_call"],
+        "empty_categories": ["command_line", "file", "registry", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "directly_detectable",
+        "notes": "Malformed SMBv1 packet + svchost anomalous child + lateral port-445 scanning provides rich, well-characterized network and host signal."
+      }
+    },
+    {
+      "id": "case-07-proxylogon",
+      "cve": {
+        "cve_id": "CVE-2021-26855",
+        "title": "Microsoft Exchange ProxyLogon SSRF",
+        "description": "A server-side request forgery vulnerability in Exchange's Autodiscover endpoint allows unauthenticated attackers to bypass authentication and write arbitrary files, commonly used to drop webshells."
+      },
+      "vuln_profile": {
+        "vuln_class": "ssrf",
+        "affected_component": "Microsoft Exchange OWA Autodiscover endpoint",
+        "trigger_conditions": ["Exchange server reachable over HTTPS; no authentication required"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "file": [
+            {"value": "ASPX webshell written under C:\\inetpub\\wwwroot\\aspnet_client\\ or Exchange OWA directory"},
+            {"value": "new file with .aspx extension created in Exchange backend inetpub directories"}
+          ],
+          "process": [
+            {"value": "w3wp.exe spawning cmd.exe or powershell.exe after webshell interaction"}
+          ],
+          "network": [
+            {"value": "incoming POST to /autodiscover/autodiscover.json with X-BEResource header containing internal Exchange path"}
+          ]
+        },
+        "unanswered_questions": ["Does telemetry capture file creation in IIS virtual directories?"]
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["file", "process", "network"],
+        "empty_categories": ["command_line", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "indirectly_detectable",
+        "notes": "The exploit itself is quiet; detection relies on post-exploit artifact (webshell file write + w3wp child) rather than the SSRF mechanism itself."
+      }
+    },
+    {
+      "id": "case-08-citrix-adc",
+      "cve": {
+        "cve_id": "CVE-2019-19781",
+        "title": "Citrix ADC / NetScaler Path Traversal RCE",
+        "description": "A path traversal vulnerability in Citrix ADC and NetScaler Gateway allows unauthenticated remote code execution via a crafted HTTP request that writes a Perl script to the /netscaler/portal/scripts directory."
+      },
+      "vuln_profile": {
+        "vuln_class": "path traversal",
+        "affected_component": "Citrix ADC management interface (nsppe / nsvpn daemon)",
+        "trigger_conditions": ["Citrix ADC management port or VPN endpoint accessible without authentication"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "file": [
+            {"value": "Perl template or script file created in /netscaler/portal/scripts/ directory by web daemon process"}
+          ],
+          "process": [
+            {"value": "nsppe or nsvpn process spawning /usr/bin/perl with the attacker-written script"}
+          ],
+          "network": [
+            {"value": "HTTP request containing ../ traversal in URL path targeting /vpn/../vpns/cfg/smb.conf or similar"}
+          ]
+        },
+        "unanswered_questions": ["Are file-system audit events available on the Citrix ADC appliance?"]
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["file", "process", "network"],
+        "empty_categories": ["command_line", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "indirectly_detectable",
+        "notes": "Detection relies on Perl template write artifact and process spawn; the traversal payload is detectable in HTTP logs but file audit on appliances is often absent."
+      }
+    },
+    {
+      "id": "case-09-fortios-traversal",
+      "cve": {
+        "cve_id": "CVE-2018-13379",
+        "title": "Fortinet FortiOS SSL VPN Credential File Path Traversal",
+        "description": "An improper limitation of pathname in the FortiOS SSL VPN web portal allows unauthenticated attackers to read the sslvpn_websession file containing cleartext credentials via a crafted HTTP request."
+      },
+      "vuln_profile": {
+        "vuln_class": "path traversal",
+        "affected_component": "FortiOS SSL VPN web portal file serving logic",
+        "trigger_conditions": ["FortiGate SSL VPN portal accessible from the internet without authentication"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "HTTP GET request to /remote/fgt_lang?lang=/../../../../../../../etc/passwd or sslvpn_websession path"},
+            {"value": "200 OK response to traversal request returning file content from sslvpn_websession"}
+          ],
+          "file": [
+            {"value": "access to /var/opt/sslvpn/websession or equivalent credential cache file by unauthenticated HTTP session"}
+          ]
+        },
+        "unanswered_questions": ["Does the FortiOS deployment log file reads from the VPN session store?"]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["network", "file"],
+        "empty_categories": ["command_line", "process", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "directly_detectable",
+        "notes": "Traversal request visible in HTTP access logs; direct credential file access depends on appliance-level file audit which is often disabled by default. [Adjudicated 2026-06-14: reclassified directly_detectable — the /../ traversal URI is itself a high-fidelity, matchable signature in HTTP access logs.]"
+      }
+    },
+    {
+      "id": "case-10-f5-icontrol",
+      "cve": {
+        "cve_id": "CVE-2022-1388",
+        "title": "F5 BIG-IP iControl REST Authentication Bypass RCE",
+        "description": "An authentication bypass in F5 BIG-IP iControl REST API allows unauthenticated remote code execution by sending crafted HTTP requests with a spoofed X-F5-Auth-Token header."
+      },
+      "vuln_profile": {
+        "vuln_class": "authentication bypass",
+        "affected_component": "F5 BIG-IP iControl REST API management interface",
+        "trigger_conditions": ["BIG-IP management port (443/8443) accessible from attacker network"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "command_line": [
+            {"value": "bash or sh process spawned by the httpd/icontrol REST API server process with attacker-supplied command"}
+          ],
+          "process": [
+            {"value": "httpd (the iControl mgmt server) spawning bash/sh children executing system commands"}
+          ],
+          "network": [
+            {"value": "POST request to /mgmt/tm/util/bash with X-F5-Auth-Token: localhost header from external source"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["command_line", "process", "network"],
+        "empty_categories": ["file", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "indirectly_detectable",
+        "notes": "The bash command execution is detectable; the auth bypass header is subtle and only clearly observable in HTTP logs with full header capture enabled."
+      }
+    },
+    {
+      "id": "case-11-vcenter-upload",
+      "cve": {
+        "cve_id": "CVE-2021-21972",
+        "title": "VMware vCenter Server File Upload RCE",
+        "description": "An unauthenticated file upload vulnerability in the vCenter Server vSphere HTML5 client (vRealize Operations plugin endpoint) allows remote code execution by uploading a JSP webshell."
+      },
+      "vuln_profile": {
+        "vuln_class": "unrestricted file upload",
+        "affected_component": "VMware vCenter vRealize Operations plugin endpoint (/ui/vropspluginui/rest/services/uploadova)",
+        "trigger_conditions": ["vCenter Server HTTPS port accessible without authentication"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "file": [
+            {"value": "JSP or WAR file written to vCenter web application directory by tomcat process"},
+            {"value": "New .jsp file under /usr/lib/vmware-vsphere-ui/server/work/ or similar vCenter webroot"}
+          ],
+          "process": [
+            {"value": "vsphere-ui or tomcat process spawning a shell (bash/sh) child after webshell access"}
+          ],
+          "network": [
+            {"value": "Unauthenticated POST multipart upload to /ui/vropspluginui/rest/services/uploadova endpoint"}
+          ]
+        },
+        "unanswered_questions": []
+      },
+      "gate_result": {
+        "passed": true,
+        "filled_categories": ["file", "process", "network"],
+        "empty_categories": ["command_line", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "indirectly_detectable",
+        "notes": "Detection is post-exploit (webshell file write + tomcat child spawn) rather than the upload itself; requires file integrity monitoring on vCenter webroot directories."
+      }
+    },
+    {
+      "id": "case-12-bluekeep",
+      "cve": {
+        "cve_id": "CVE-2019-0708",
+        "title": "Windows Remote Desktop Services Pre-Authentication RCE (BlueKeep)",
+        "description": "A use-after-free in Windows Remote Desktop Services allows unauthenticated remote code execution via a specially crafted RDP connection, exploitable before any credentials are checked."
+      },
+      "vuln_profile": {
+        "vuln_class": "memory corruption",
+        "affected_component": "Windows Remote Desktop Services (termdd.sys) Channel 3 handler",
+        "trigger_conditions": ["RDP port 3389 reachable; no authentication required; Windows 7/Server 2008 R2 or older"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "anomalous RDP channel negotiation packets with malformed MS_T120 channel data before authentication"},
+            {"value": "connection terminated abruptly or kernel crash (Blue Screen) following crafted RDP request"}
+          ],
+          "process": [
+            {"value": "svchost.exe (termservice) spawning unexpected child process after successful exploitation"}
+          ]
+        },
+        "unanswered_questions": ["Is kernel-level RDP protocol anomaly detection available in this environment?"]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["network", "process"],
+        "empty_categories": ["command_line", "file", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "indirectly_detectable",
+        "notes": "Only 2 categories filled; exploit-layer RDP anomaly is hard to distinguish from legitimate errors; detection relies on post-exploit process behavior which is secondary."
+      }
+    },
+    {
+      "id": "case-13-curveball",
+      "cve": {
+        "cve_id": "CVE-2020-0601",
+        "title": "Windows CryptoAPI Certificate Validation Spoofing (CurveBall)",
+        "description": "Windows CryptoAPI (crypt32.dll) fails to validate the parameters of elliptic curve keys in certificates, allowing an attacker to spoof code signatures and TLS certificates using a crafted certificate chain."
+      },
+      "vuln_profile": {
+        "vuln_class": "cryptographic weakness",
+        "affected_component": "Windows crypt32.dll ECC certificate validation",
+        "trigger_conditions": ["victim processes an attacker-presented certificate with crafted ECC key parameters"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "api_call": [
+            {"value": "CertVerifyCertificateChainPolicy invoked with certificate containing spoofed ECC curve parameters (detectable only with CryptoAPI audit logging enabled)"}
+          ]
+        },
+        "unanswered_questions": [
+          "Is Windows CryptoAPI audit event logging (Event ID 80/81) enabled?",
+          "Does the environment log certificate validation failures?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["api_call"],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "Requires CryptoAPI audit logging (usually off by default); no host signal without that telemetry; runtime detection depends entirely on operator logging policy."
+      }
+    },
+    {
+      "id": "case-14-pwnkit",
+      "cve": {
+        "cve_id": "CVE-2021-4034",
+        "title": "Polkit pkexec Local Privilege Escalation (PwnKit)",
+        "description": "A memory corruption vulnerability in pkexec (Polkit's SUID binary) allows any unprivileged local user to gain root privileges by exploiting a flaw in the argument vector handling."
+      },
+      "vuln_profile": {
+        "vuln_class": "privilege escalation",
+        "affected_component": "pkexec SUID binary (Polkit)",
+        "trigger_conditions": ["local user account access; pkexec SUID binary present (default on most Linux distributions)"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "process": [
+            {"value": "pkexec executed by a non-root user immediately followed by a root-owned shell spawn (requires auditd execve syscall rules)"}
+          ],
+          "api_call": [
+            {"value": "execve() syscall on pkexec binary with crafted argc=0 (detectable via Linux auditd execve audit rules)"}
+          ]
+        },
+        "unanswered_questions": [
+          "Are Linux auditd execve rules enabled for SUID binaries?",
+          "Is eBPF-based process monitoring deployed?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["process", "api_call"],
+        "empty_categories": ["command_line", "file", "network", "registry", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "Detectable via Linux auditd execve rules on SUID binaries; most Linux deployments do NOT enable these rules by default, so detection is environment-dependent."
+      }
+    },
+    {
+      "id": "case-15-dirtycow",
+      "cve": {
+        "cve_id": "CVE-2016-5195",
+        "title": "Linux Kernel Dirty COW Race Condition Privilege Escalation",
+        "description": "A race condition in the Linux kernel's memory subsystem (mm/gup.c) allows local users to gain write access to read-only memory mappings, enabling privilege escalation by overwriting SUID binaries or /etc/passwd."
+      },
+      "vuln_profile": {
+        "vuln_class": "race condition",
+        "affected_component": "Linux kernel copy-on-write memory management (mm/gup.c)",
+        "trigger_conditions": ["local user account; Linux kernel version 2.6.22 to 4.8.2"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "file": [
+            {"value": "write to /proc/self/mem or /proc/<pid>/mem targeting a read-only memory-mapped region (detectable with auditd file watches on /proc)"}
+          ],
+          "api_call": [
+            {"value": "mmap() + madvise(MADV_DONTNEED) + write() syscall sequence on read-only file-backed mapping in rapid succession (requires auditd syscall tracing)"}
+          ]
+        },
+        "unanswered_questions": [
+          "Is auditd configured to watch /proc filesystem access?",
+          "Is kernel syscall tracing (BPF/eBPF) deployed?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["file", "api_call"],
+        "empty_categories": ["command_line", "network", "registry", "process", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "Detectable only with /proc filesystem audit watches + syscall-level tracing; rarely configured in standard Linux deployments without explicit security hardening."
+      }
+    },
+    {
+      "id": "case-16-baron-samedit",
+      "cve": {
+        "cve_id": "CVE-2021-3156",
+        "title": "Sudo Heap Buffer Overflow (Baron Samedit)",
+        "description": "A heap overflow in sudo's command parsing (sudoers policy plugin) when invoked with a backslash-terminated argument allows any local user to gain root privileges without password."
+      },
+      "vuln_profile": {
+        "vuln_class": "heap overflow",
+        "affected_component": "sudo sudoedit argument parsing (match.c)",
+        "trigger_conditions": ["local user account; sudo version 1.8.2 to 1.9.5p1 installed"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "process": [
+            {"value": "sudoedit invoked with malformed argument list containing trailing backslash by non-sudo-authorized user (detectable with auditd execve on /usr/bin/sudoedit)"}
+          ],
+          "command_line": [
+            {"value": "sudoedit or sudo -s -i invoked with a command line ending in a single backslash character"}
+          ]
+        },
+        "unanswered_questions": [
+          "Is auditd logging sudo/sudoedit execve events?",
+          "Is sudo audit logging enabled in sudoers?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["process", "command_line"],
+        "empty_categories": ["file", "network", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "Detection requires auditd sudo execve logging or sudo audit plugin; neither is default; environment with explicit sudo audit config can catch the malformed invocation."
+      }
+    },
+    {
+      "id": "case-17-dirtypipe",
+      "cve": {
+        "cve_id": "CVE-2022-0847",
+        "title": "Linux Kernel Dirty Pipe File Overwrite Privilege Escalation",
+        "description": "A flaw in the Linux kernel pipe handling (PIPE_BUF_FLAG_CAN_MERGE) allows local users to overwrite data in arbitrary read-only files including SUID binaries, enabling privilege escalation."
+      },
+      "vuln_profile": {
+        "vuln_class": "file overwrite",
+        "affected_component": "Linux kernel pipe page cache merge (fs/pipe.c)",
+        "trigger_conditions": ["local user account; Linux kernel 5.8 to 5.16.10"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "file": [
+            {"value": "unexpected write to a read-only file or SUID binary such as /usr/bin/passwd detected via file integrity monitoring (FIM)"}
+          ],
+          "api_call": [
+            {"value": "splice() followed by write() to a pipe with PIPE_BUF_FLAG_CAN_MERGE targeting a read-only page cache entry (detectable via eBPF/auditd syscall tracing)"}
+          ]
+        },
+        "unanswered_questions": [
+          "Is file integrity monitoring (FIM/auditd inotify) deployed on SUID binaries?",
+          "Are kernel-level pipe syscalls being traced?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["file", "api_call"],
+        "empty_categories": ["command_line", "network", "registry", "process", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "Detectable only with FIM on SUID binaries or kernel syscall tracing; standard Linux setups lack both; high EPSS/exploitation frequency makes investment justified."
+      }
+    },
+    {
+      "id": "case-18-sysmon-imageload",
+      "cve": {
+        "cve_id": "CVE-2021-1675",
+        "title": "Windows Print Spooler Remote Code Execution (Early PrintNightmare Variant)",
+        "description": "An earlier Print Spooler vulnerability allows low-privileged users to load arbitrary DLLs via the AddPrinter API, requiring Sysmon Event ID 7 (image load) telemetry for detection of the DLL loading behavior."
+      },
+      "vuln_profile": {
+        "vuln_class": "dll injection",
+        "affected_component": "Windows Print Spooler (spoolsv.exe) AddPrinter RPC",
+        "trigger_conditions": ["low-privileged Windows user account; Print Spooler service running"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "file": [
+            {"value": "malicious DLL written to print driver directory C:\\Windows\\System32\\spool\\drivers\\"}
+          ],
+          "api_call": [
+            {"value": "spoolsv.exe loading an unsigned or unusual DLL via AddPrinterDriverEx (visible in Sysmon Event ID 7 image load events if Sysmon is deployed with ImageLoad monitoring)"}
+          ]
+        },
+        "unanswered_questions": [
+          "Is Sysmon deployed with Event ID 7 image load rules enabled?",
+          "Is Windows Defender Application Control (WDAC) blocking unsigned DLL loads?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["file", "api_call"],
+        "empty_categories": ["command_line", "network", "registry", "process", "parent_child"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "DLL image-load detection requires Sysmon EID 7 with image load rules, which is not enabled in default Sysmon configurations; file write to spool directory is a secondary signal."
+      }
+    },
+    {
+      "id": "case-19-openssl-typeconf",
+      "cve": {
+        "cve_id": "CVE-2023-0286",
+        "title": "OpenSSL X.400 Address Type Confusion (GeneralName)",
+        "description": "A type confusion vulnerability in OpenSSL's X.509 certificate parsing of X.400 addresses (GeneralName ASN.1 structure) can lead to a read of a memory address, potentially enabling denial of service or information disclosure."
+      },
+      "vuln_profile": {
+        "vuln_class": "type confusion",
+        "affected_component": "OpenSSL X.509 GeneralName X.400 address parsing (x509v3.c)",
+        "trigger_conditions": ["application uses CRL Distribution Points or OCSP with X.400 addresses; attacker can present a crafted certificate"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "What runtime telemetry is available for OpenSSL memory operations?",
+          "Can TLS session metadata identify certificates with X.400 GeneralName fields?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "control_only",
+        "notes": "No observable runtime host signal; exploitation occurs inside TLS certificate parsing with no external process or network artifact; mitigation (patch/upgrade) is the only defense."
+      }
+    },
+    {
+      "id": "case-20-openssl-punycode",
+      "cve": {
+        "cve_id": "CVE-2022-3602",
+        "title": "OpenSSL Punycode Buffer Overflow in X.509 Certificate Email Field",
+        "description": "A buffer overflow in OpenSSL's punycode decoding of email address fields in X.509 certificates (emailAddress Subject Alternative Name) can cause a stack buffer overflow and crash or potential code execution."
+      },
+      "vuln_profile": {
+        "vuln_class": "buffer overflow",
+        "affected_component": "OpenSSL punycode decoding for X.509 emailAddress SAN (crypto/punycode.c)",
+        "trigger_conditions": ["application verifies a TLS certificate from an attacker-controlled CA containing a crafted punycode email SAN"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "Is there any telemetry for TLS certificate parsing failures at the library level?",
+          "Can process crash or core dump analysis reveal exploitation attempts?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "control_only",
+        "notes": "Stack overflow in certificate email parsing occurs inside the TLS handshake; no host telemetry can observe this without library instrumentation; patch is the only mitigation."
+      }
+    },
+    {
+      "id": "case-21-openssl-sm2",
+      "cve": {
+        "cve_id": "CVE-2021-3711",
+        "title": "OpenSSL SM2 Decryption Buffer Overflow",
+        "description": "A buffer overflow in OpenSSL's SM2 decryption implementation allows an attacker who can present a crafted SM2 content to overflow the allocated buffer, potentially executing arbitrary code in applications using SM2 decryption."
+      },
+      "vuln_profile": {
+        "vuln_class": "buffer overflow",
+        "affected_component": "OpenSSL SM2 decryption (crypto/ec/sm2_decrypt.c)",
+        "trigger_conditions": ["application calls EVP_PKEY_decrypt with SM2 key; attacker controls decryption input"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "Does the application log SM2 decryption operation metadata?",
+          "Is there process memory telemetry that could identify buffer overflow patterns?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "control_only",
+        "notes": "SM2 decryption overflow is an in-process cryptographic operation with no observable host signal; SM2 is uncommon in non-Chinese deployments; control is upgrade/disable SM2."
+      }
+    },
+    {
+      "id": "case-22-heartbleed",
+      "cve": {
+        "cve_id": "CVE-2014-0160",
+        "title": "OpenSSL Heartbleed TLS Heartbeat Out-of-Bounds Memory Read",
+        "description": "A missing bounds check in OpenSSL's TLS heartbeat extension allows remote attackers to read up to 64KB of server memory per request, leaking private keys, session tokens, and credentials without authentication."
+      },
+      "vuln_profile": {
+        "vuln_class": "out-of-bounds read",
+        "affected_component": "OpenSSL TLS/DTLS heartbeat extension (ssl/d1_both.c, ssl/t1_lib.c)",
+        "trigger_conditions": ["TLS service using OpenSSL 1.0.1 through 1.0.1f reachable; no authentication required"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "TLS heartbeat request with length field larger than payload (oversized heartbeat); volume of heartbeat requests from one source may indicate scanning/exploitation"}
+          ]
+        },
+        "unanswered_questions": [
+          "Is deep packet inspection of TLS heartbeat messages available?",
+          "Can IDS rules detect oversized TLS heartbeat payloads without full TLS decryption?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["network"],
+        "empty_categories": ["command_line", "file", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "control_only",
+        "notes": "Memory disclosure leaves no host artifact; network detection requires TLS-aware IDS inspecting heartbeat payload sizes; primary controls are patch + certificate rotation."
+      }
+    },
+    {
+      "id": "case-23-libwebp",
+      "cve": {
+        "cve_id": "CVE-2023-4863",
+        "title": "Google libwebp Heap Buffer Overflow (0-day used in Chrome/Electron)",
+        "description": "A heap buffer overflow in the libwebp library's BuildHuffmanTable function allows remote code execution when processing a crafted WebP image, exploited as a zero-day in Chromium-based browsers and Electron apps."
+      },
+      "vuln_profile": {
+        "vuln_class": "heap overflow",
+        "affected_component": "libwebp Huffman table construction (src/dec/vp8l_dec.c)",
+        "trigger_conditions": ["victim opens or previews a malicious WebP image via a vulnerable browser or application"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "Can renderer process crash telemetry identify WebP-triggered heap corruption?",
+          "Are browser process memory analysis tools deployed?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "control_only",
+        "notes": "Client-side image parsing in sandboxed renderer; no reliable runtime signal outside of browser telemetry; mitigation is patch + content filtering of WebP in untrusted contexts."
+      }
+    },
+    {
+      "id": "case-24-cisco-asa-read",
+      "cve": {
+        "cve_id": "CVE-2020-3452",
+        "title": "Cisco ASA/FTD Web Services Path Traversal (Unauthenticated File Read)",
+        "description": "A path traversal vulnerability in Cisco ASA and Firepower Threat Defense (FTD) web services allows unauthenticated remote attackers to read sensitive files from the file system including configuration data."
+      },
+      "vuln_profile": {
+        "vuln_class": "path traversal",
+        "affected_component": "Cisco ASA/FTD web services file serving (ASDM/WebVPN)",
+        "trigger_conditions": ["ASA ASDM or WebVPN web portal accessible from attacker network; no authentication"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "HTTP GET request with ../ or %2F traversal sequence to /+CSCOT+/translation-table?type=mst&textdomain=...&lang=en target"}
+          ]
+        },
+        "unanswered_questions": [
+          "Does the ASA/FTD generate web access logs for management plane HTTP requests?",
+          "Are syslog events for management-plane file access available?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["network"],
+        "empty_categories": ["command_line", "file", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "control_only",
+        "notes": "Only 1 category filled; HTTP log visibility on ASA is minimal; file read from appliance leaves no additional host artifact; control is patch + restrict management interface access."
+      }
+    },
+    {
+      "id": "case-25-appliance-rce-vague",
+      "cve": {
+        "cve_id": "CVE-2024-99001",
+        "title": "Unauthenticated RCE in Industrial Appliance X (Details Withheld)",
+        "description": "A pre-authentication remote code execution vulnerability in a network appliance; technical details are withheld by the vendor pending a coordinated patch. No PoC or detection guidance has been published."
+      },
+      "vuln_profile": {
+        "vuln_class": "unknown",
+        "affected_component": "unknown",
+        "trigger_conditions": ["unknown"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "What component is vulnerable?",
+          "What is the exploitation mechanism?",
+          "What host or network artifacts does exploitation produce?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "insufficient_information",
+        "notes": "No technical details available; cannot determine detection artifacts; classifier should decline to assign a detection class without more information."
+      }
+    },
+    {
+      "id": "case-26-single-category",
+      "cve": {
+        "cve_id": "CVE-2024-20353",
+        "title": "Cisco ASA/FTD Persistent Local Code Execution (Sparse Detail)",
+        "description": "A vulnerability in Cisco ASA and FTD allows an authenticated attacker with low privileges to execute code persistently on the device. Limited public technical details are available describing only a vague process-level indicator."
+      },
+      "vuln_profile": {
+        "vuln_class": "unknown",
+        "affected_component": "Cisco ASA device management subsystem",
+        "trigger_conditions": ["unknown authentication requirement"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "process": [
+            {"value": "anomalous process execution on Cisco ASA device (sparse vendor advisory only)"}
+          ]
+        },
+        "unanswered_questions": [
+          "What specific process executes?",
+          "What network or file artifacts accompany exploitation?",
+          "What are the exact trigger conditions?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["process"],
+        "empty_categories": ["command_line", "file", "network", "registry", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "insufficient_information",
+        "notes": "Only 1 vague indicator category; insufficient specificity to write a detection; more detail needed on trigger conditions, process identity, and correlated artifacts."
+      }
+    },
+    {
+      "id": "case-27-embargoed",
+      "cve": {
+        "cve_id": "CVE-2024-55555",
+        "title": "Reserved CVE — Details Embargoed",
+        "description": "This CVE identifier has been reserved but the details are under embargo. No public technical information is available at the time of this assessment."
+      },
+      "vuln_profile": {
+        "vuln_class": "unknown",
+        "affected_component": "unknown",
+        "trigger_conditions": ["unknown"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "What product and component is affected?",
+          "What is the vulnerability class?",
+          "Are any IOCs or behavioral indicators available under NDA?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "insufficient_information",
+        "notes": "CVE is embargoed; no technical detail available; classification is impossible without minimum information about the vulnerability or its exploitation artifacts."
+      }
+    },
+    {
+      "id": "case-28-contradictory",
+      "cve": {
+        "cve_id": "CVE-2023-99999",
+        "title": "Contradictory/Placeholder Assessment (Synthetic Case)",
+        "description": "A synthetic case representing contradictory or placeholder indicator data where initial source material contains mutually inconsistent claims about exploitation behavior, precluding reliable detection guidance."
+      },
+      "vuln_profile": {
+        "vuln_class": "unknown",
+        "affected_component": "unknown",
+        "trigger_conditions": ["unknown"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "Source A claims network-only exploitation; Source B claims no network egress occurs. Which is correct?",
+          "Reported behavior in Source C contradicts Sources A and B. Assessment quality insufficient."
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "insufficient_information",
+        "notes": "Contradictory indicators from sources prevent reliable classification; analyst should re-run Loop 2 with curated, consistent source material before attempting detection."
+      }
+    },
+    {
+      "id": "case-29-http2-reset",
+      "cve": {
+        "cve_id": "CVE-2023-44487",
+        "title": "HTTP/2 Rapid Reset Attack (Denial of Service)",
+        "description": "A protocol-level flaw in HTTP/2 allows an attacker to send a large number of HEADERS frames immediately followed by RST_STREAM frames, exhausting server resources and causing denial of service without completing any request."
+      },
+      "vuln_profile": {
+        "vuln_class": "resource exhaustion",
+        "affected_component": "HTTP/2 server stream handling (all major web servers and frameworks)",
+        "trigger_conditions": ["HTTP/2 endpoint accessible; attacker sends rapid HEADERS+RST_STREAM cycles"]
+      },
+      "loop2_output": {
+        "indicators": {
+          "network": [
+            {"value": "high volume of HTTP/2 RST_STREAM frames following HEADERS frames from single source; server resource exhaustion metrics spiking"}
+          ]
+        },
+        "unanswered_questions": [
+          "What host artifacts (beyond network-layer rate counters) distinguish this from legitimate high-traffic?",
+          "Is there a process-level indicator for HTTP/2 stream exhaustion?"
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": ["network"],
+        "empty_categories": ["command_line", "file", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "environment_dependent",
+        "notes": "Availability-only DoS; only 1 category filled; the network signal is rate-based and hard to distinguish from legitimate traffic spikes; no host artifact; detection guidance is underspecified. [Adjudicated 2026-06-14: reclassified environment_dependent — a rate-based signal does exist; it requires special rate-monitoring telemetry rather than being unclassifiable.]"
+      }
+    },
+    {
+      "id": "case-30-no-public-detail",
+      "cve": {
+        "cve_id": "CVE-2024-12345",
+        "title": "Vendor-Confirmed Vulnerability — No Public Technical Detail",
+        "description": "A vendor has confirmed a vulnerability in their product and released a patch, but has not disclosed any technical details about the vulnerability class, affected component, or potential exploitation behavior."
+      },
+      "vuln_profile": {
+        "vuln_class": "unknown",
+        "affected_component": "unknown",
+        "trigger_conditions": ["unknown"]
+      },
+      "loop2_output": {
+        "indicators": {},
+        "unanswered_questions": [
+          "No public information about exploitation behavior is available.",
+          "Vendor advisory contains only CVSS score and patch instructions.",
+          "No researcher analysis, PoC, or incident reports exist at time of assessment."
+        ]
+      },
+      "gate_result": {
+        "passed": false,
+        "filled_categories": [],
+        "empty_categories": ["command_line", "file", "network", "registry", "process", "parent_child", "api_call"],
+        "threshold": 3
+      },
+      "expected": {
+        "detectability_class": "insufficient_information",
+        "notes": "Vendor patch-only advisory with no technical disclosure; Loop 2 produced zero indicators; classification deferred until exploit research or incident data becomes available."
+      }
+    }
+  ]
+}

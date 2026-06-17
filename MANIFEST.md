@@ -1,0 +1,32 @@
+# FragChain Codex Control Pack Manifest
+
+- `AGENTS.md`
+- `docs/architecture/000-fragchain-scope.md`
+- `docs/architecture/001-current-architecture.md`
+- `docs/architecture/002-domain-model.md`
+- `docs/architecture/003-pipeline-contract.md`
+- `docs/architecture/004-detectability-classifier.md`
+- `docs/architecture/005-artifact-router.md`
+- `docs/architecture/006-validation-strategy.md`
+- `docs/architecture/007-human-review-workflow.md`
+- `docs/architecture/008-rebuild-decision-log.md`
+- `docs/architecture/adr/ADR-0001-private-poc-scope.md`
+- `docs/architecture/adr/ADR-0002-defense-engineering-layer.md`
+- `docs/architecture/adr/ADR-0003-schema-first-pipeline.md`
+- `docs/codex/change-log.md`
+- `docs/codex/harness/fragchain-prompt-harness.md`
+- `docs/codex/harness/stage-0-baseline.md`
+- `docs/codex/harness/stage-1-detectability.md`
+- `docs/codex/harness/stage-2-artifact-router.md`
+- `docs/codex/harness/stage-3-validation.md`
+- `docs/codex/known-risks.md`
+- `docs/codex/open-questions.md`
+- `docs/codex/skills/architecture-review.md`
+- `docs/codex/skills/artifact-routing.md`
+- `docs/codex/skills/code-quality-remediation.md`
+- `docs/codex/skills/detectability-analysis.md`
+- `docs/codex/skills/detection-validation.md`
+- `docs/codex/skills/documentation-adr.md`
+- `docs/codex/skills/domain-modeling.md`
+- `docs/codex/skills/llm-output-hardening.md`
+- `docs/codex/skills/pipeline-stage.md`

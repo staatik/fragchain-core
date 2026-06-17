@@ -1,0 +1,16 @@
+CVE: {cve_id}
+
+Vulnerability profile (Loop 1 output):
+{vuln_profile}
+
+Behavioral indicators per telemetry category (Loop 2 output; counts and samples):
+{indicators_summary}
+
+Detectability classification (advisory):
+{detectability_summary}
+
+Artifact plan (advisory):
+{plan_summary}
+
+Task: produce the analyst-research-task JSON object for {cve_id} following
+the schema and rules in the system prompt. Output ONLY the JSON object.

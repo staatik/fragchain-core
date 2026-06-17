@@ -1,0 +1,20 @@
+CVE under analysis: {cve_id}
+
+Description:
+{cve_description}
+
+CVSS: {cvss_score} ({cvss_vector})
+EPSS: {epss_score}
+CISA KEV: {kev}
+AttackerKB score: {attackerkb_score}
+
+Affected products:
+{affected_products}
+
+Available references (you MUST cite from these; do not invent new URLs):
+{references}
+
+Additional context (RAG-retrieved excerpts):
+{rag_context}
+
+Task: produce the AttackChain JSON object for {cve_id} following the schema and rules in the system prompt. Output ONLY the JSON object.

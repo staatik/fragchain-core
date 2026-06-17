@@ -1,0 +1,36 @@
+CVE: {cve_id}
+Description: {cve_description}
+CVSS: {cvss_score}    EPSS: {epss_score}    KEV: {kev}
+
+Technique: {technique_id} ({technique_name})
+Tactic: {tactic_id} ({tactic})
+Sub-technique: {sub_technique_id}
+Step confidence: {confidence}
+
+Profile: {profile_name} ({profile_product}/{profile_service})
+
+Profile fields:
+{profile_fields}
+
+Profile examples:
+{profile_examples}
+
+Chain context:
+{previous_step}
+{next_step}
+
+Preconditions:
+{preconditions}
+
+Detection opportunity hint: {detection_opportunity}
+
+Behavioral indicators (use these as the detection grounding):
+{behavioral_indicators}
+
+References:
+{references}
+
+TLP: {tlp}
+Priority score: {priority_score}
+
+Emit one Sigma rule YAML targeting the profile above. Output YAML only.

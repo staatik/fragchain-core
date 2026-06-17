@@ -1,0 +1,7 @@
+CVE: {cve_id}
+CVSS: {cvss}
+
+Sources:
+{sources}
+
+Produce the JSON object described in the system prompt. Output JSON only.

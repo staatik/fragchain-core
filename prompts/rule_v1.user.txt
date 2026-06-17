@@ -1,0 +1,28 @@
+Generate one Sigma rule for the following ATT&CK step.
+
+CVE: {cve_id}
+CVE summary: {cve_description}
+Severity hints: CVSS={cvss_score}, KEV={kev}, EPSS={epss_score}
+
+ATT&CK step:
+- tactic: {tactic} ({tactic_id})
+- technique: {technique_id} — {technique_name}
+- sub-technique: {sub_technique_id}
+- confidence: {confidence}
+- preconditions: {preconditions}
+- detection_opportunity: {detection_opportunity}
+
+Logsource profile:
+- name: {profile_name}
+- product: {profile_product}
+- service: {profile_service}
+- field conventions: {profile_fields}
+- few-shot examples:
+{profile_examples}
+
+References to cite:
+{references}
+
+TLP: {tlp}
+
+Emit the Sigma YAML only.

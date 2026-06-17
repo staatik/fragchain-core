@@ -1,0 +1,39 @@
+# Detectability Pilot — Draft Labels for Adjudication
+
+Review each proposed `detectability_class`. Corrections go into
+`benchmarks/detectability_pilot_v1.json` (`expected.detectability_class`) —
+that JSON is the source of truth; regenerate this doc with
+`python scripts/run_detectability_benchmark.py --emit-review-doc`.
+
+| Case | CVE | Filled categories | Proposed class | Rationale |
+|---|---|---|---|---|
+| case-01-log4shell | CVE-2021-44228 | network, process, command_line | `directly_detectable` | Strong stable network egress + java->shell child process + ${jndi:} payload signature; high-fidelity in standard telemetry. |
+| case-02-shellshock | CVE-2014-6271 | process, command_line, network, parent_child | `directly_detectable` | httpd->bash->shell_child parent chain + () {:}; header signature are stable and high-fidelity in web server logs and auditd. |
+| case-03-outlook-ntlm | CVE-2023-23397 | network, process, command_line | `directly_detectable` | outlook.exe -> anomalous SMB egress to non-fileserver is a stable, unique signal detectable with standard Windows network telemetry. |
+| case-04-printnightmare-rce | CVE-2021-34527 | process, file, network, api_call | `directly_detectable` | spoolsv.exe DLL load from UNC + driver write to spool directory + RPC call pattern is a high-fidelity, well-documented detection. |
+| case-05-zerologon | CVE-2020-1472 | network, api_call, process | `directly_detectable` | Zero-filled Netlogon credential + burst pattern + password-reset RPC is a unique, published detection with Windows Security Event ID 4742 correlation. |
+| case-06-eternalblue | CVE-2017-0144 | network, process, api_call | `directly_detectable` | Malformed SMBv1 packet + svchost anomalous child + lateral port-445 scanning provides rich, well-characterized network and host signal. |
+| case-07-proxylogon | CVE-2021-26855 | file, process, network | `indirectly_detectable` | The exploit itself is quiet; detection relies on post-exploit artifact (webshell file write + w3wp child) rather than the SSRF mechanism itself. |
+| case-08-citrix-adc | CVE-2019-19781 | file, process, network | `indirectly_detectable` | Detection relies on Perl template write artifact and process spawn; the traversal payload is detectable in HTTP logs but file audit on appliances is often absent. |
+| case-09-fortios-traversal | CVE-2018-13379 | network, file | `indirectly_detectable` | Traversal request visible in HTTP access logs; direct credential file access depends on appliance-level file audit which is often disabled by default. |
+| case-10-f5-icontrol | CVE-2022-1388 | command_line, process, network | `indirectly_detectable` | The bash command execution is detectable; the auth bypass header is subtle and only clearly observable in HTTP logs with full header capture enabled. |
+| case-11-vcenter-upload | CVE-2021-21972 | file, process, network | `indirectly_detectable` | Detection is post-exploit (webshell file write + tomcat child spawn) rather than the upload itself; requires file integrity monitoring on vCenter webroot directories. |
+| case-12-bluekeep | CVE-2019-0708 | network, process | `indirectly_detectable` | Only 2 categories filled; exploit-layer RDP anomaly is hard to distinguish from legitimate errors; detection relies on post-exploit process behavior which is secondary. |
+| case-13-curveball | CVE-2020-0601 | api_call | `environment_dependent` | Requires CryptoAPI audit logging (usually off by default); no host signal without that telemetry; runtime detection depends entirely on operator logging policy. |
+| case-14-pwnkit | CVE-2021-4034 | process, api_call | `environment_dependent` | Detectable via Linux auditd execve rules on SUID binaries; most Linux deployments do NOT enable these rules by default, so detection is environment-dependent. |
+| case-15-dirtycow | CVE-2016-5195 | file, api_call | `environment_dependent` | Detectable only with /proc filesystem audit watches + syscall-level tracing; rarely configured in standard Linux deployments without explicit security hardening. |
+| case-16-baron-samedit | CVE-2021-3156 | process, command_line | `environment_dependent` | Detection requires auditd sudo execve logging or sudo audit plugin; neither is default; environment with explicit sudo audit config can catch the malformed invocation. |
+| case-17-dirtypipe | CVE-2022-0847 | file, api_call | `environment_dependent` | Detectable only with FIM on SUID binaries or kernel syscall tracing; standard Linux setups lack both; high EPSS/exploitation frequency makes investment justified. |
+| case-18-sysmon-imageload | CVE-2021-1675 | file, api_call | `environment_dependent` | DLL image-load detection requires Sysmon EID 7 with image load rules, which is not enabled in default Sysmon configurations; file write to spool directory is a secondary signal. |
+| case-19-openssl-typeconf | CVE-2023-0286 | (none) | `control_only` | No observable runtime host signal; exploitation occurs inside TLS certificate parsing with no external process or network artifact; mitigation (patch/upgrade) is the only defense. |
+| case-20-openssl-punycode | CVE-2022-3602 | (none) | `control_only` | Stack overflow in certificate email parsing occurs inside the TLS handshake; no host telemetry can observe this without library instrumentation; patch is the only mitigation. |
+| case-21-openssl-sm2 | CVE-2021-3711 | (none) | `control_only` | SM2 decryption overflow is an in-process cryptographic operation with no observable host signal; SM2 is uncommon in non-Chinese deployments; control is upgrade/disable SM2. |
+| case-22-heartbleed | CVE-2014-0160 | network | `control_only` | Memory disclosure leaves no host artifact; network detection requires TLS-aware IDS inspecting heartbeat payload sizes; primary controls are patch + certificate rotation. |
+| case-23-libwebp | CVE-2023-4863 | (none) | `control_only` | Client-side image parsing in sandboxed renderer; no reliable runtime signal outside of browser telemetry; mitigation is patch + content filtering of WebP in untrusted contexts. |
+| case-24-cisco-asa-read | CVE-2020-3452 | network | `control_only` | Only 1 category filled; HTTP log visibility on ASA is minimal; file read from appliance leaves no additional host artifact; control is patch + restrict management interface access. |
+| case-25-appliance-rce-vague | CVE-2024-99001 | (none) | `insufficient_information` | No technical details available; cannot determine detection artifacts; classifier should decline to assign a detection class without more information. |
+| case-26-single-category | CVE-2024-20353 | process | `insufficient_information` | Only 1 vague indicator category; insufficient specificity to write a detection; more detail needed on trigger conditions, process identity, and correlated artifacts. |
+| case-27-embargoed | CVE-2024-55555 | (none) | `insufficient_information` | CVE is embargoed; no technical detail available; classification is impossible without minimum information about the vulnerability or its exploitation artifacts. |
+| case-28-contradictory | CVE-2023-99999 | (none) | `insufficient_information` | Contradictory indicators from sources prevent reliable classification; analyst should re-run Loop 2 with curated, consistent source material before attempting detection. |
+| case-29-http2-reset | CVE-2023-44487 | network | `insufficient_information` | Availability-only DoS; only 1 category filled; the network signal is rate-based and hard to distinguish from legitimate traffic spikes; no host artifact; detection guidance is underspecified. |
+| case-30-no-public-detail | CVE-2024-12345 | (none) | `insufficient_information` | Vendor patch-only advisory with no technical disclosure; Loop 2 produced zero indicators; classification deferred until exploit research or incident data becomes available. |
