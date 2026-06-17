@@ -20,10 +20,9 @@ every CVE whether or not one is warranted.
 
 ---
 
-## What this actually is, honestly
+## What this actually is:
 
-FragChain is a **pre-1.0 proof-of-concept and reference/portfolio
-project**, not a finished production security product. The README leads
+FragChain is a **pre-1.0**, not a finished production security product. The README leads
 with the direction the platform is being built toward; this section is
 the straight version of what is and isn't true today.
 
